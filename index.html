@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="週予算">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.json">
+  <title>週予算</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f5f7;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #6e6e73;
+      --line: #e6e6eb;
+      --black: #111111;
+      --green: #0a8f4d;
+      --yellow: #b87300;
+      --red: #d70015;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-text-size-adjust: 100%;
+      user-select: none;
+    }
+    .app { max-width: 430px; margin: 0 auto; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 6px 2px 14px;
+    }
+    .title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; }
+    .week { color: var(--muted); font-size: 13px; font-weight: 600; }
+    .hero {
+      background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+      border-radius: 28px;
+      padding: 24px 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.08);
+      margin-bottom: 14px;
+    }
+    .label { font-size: 14px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+    .remaining {
+      font-size: 54px;
+      font-weight: 900;
+      letter-spacing: -2.4px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .ok { color: var(--green); }
+    .warn { color: var(--yellow); }
+    .bad { color: var(--red); }
+    .subline { color: var(--muted); font-size: 14px; font-weight: 650; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .card {
+      background: var(--card);
+      border-radius: 22px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.055);
+    }
+    .num { font-size: 24px; font-weight: 850; letter-spacing: -0.7px; }
+    .input-card { background: var(--card); border-radius: 24px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.055); margin-bottom: 14px; }
+    input {
+      width: 100%;
+      font-size: 32px;
+      font-weight: 800;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #fff;
+      outline: none;
+      margin: 4px 0 10px;
+      text-align: center;
+      user-select: text;
+    }
+    button {
+      width: 100%;
+      min-height: 52px;
+      border: 0;
+      border-radius: 17px;
+      padding: 14px 16px;
+      font-size: 18px;
+      font-weight: 800;
+      background: var(--black);
+      color: #fff;
+      -webkit-appearance: none;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .secondary { background: #e9e9ee; color: var(--text); }
+    .danger { background: #ffe3e3; color: #aa0011; }
+    .history { background: var(--card); border-radius: 24px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.055); }
+    .history-title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 18px; }
+    .history-item:last-child { border-bottom: 0; }
+    .time { color: var(--muted); font-size: 14px; font-weight: 650; }
+    .amount { font-weight: 850; }
+    .empty { color: var(--muted); font-size: 14px; padding: 10px 0 2px; }
+    .toast {
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      max-width: 430px;
+      margin: 0 auto;
+      background: rgba(17,17,17,.92);
+      color: white;
+      padding: 14px 16px;
+      border-radius: 18px;
+      text-align: center;
+      font-weight: 750;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: .2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#000; --card:#1c1c1e; --text:#f5f5f7; --muted:#a1a1a6; --line:#33333a; --black:#f5f5f7; }
+      input { background:#111; color:#fff; border-color:#33333a; }
+      button { background:#f5f5f7; color:#000; }
+      .secondary { background:#2c2c2e; color:#f5f5f7; }
+      .danger { background:#3a171b; color:#ff6b78; }
+      .hero { background: linear-gradient(180deg, #1c1c1e 0%, #161618 100%); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title">週予算</div>
+      <div id="week" class="week"></div>
+    </div>
+
+    <section class="hero">
+      <div class="label">今週の残り</div>
+      <div id="remaining" class="remaining ok">¥100,000</div>
+      <div id="subline" class="subline">支出 ¥0</div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="label">週予算</div>
+        <div id="budgetText" class="num">¥100,000</div>
+      </div>
+      <div class="card">
+        <div class="label">今日から1日あたり</div>
+        <div id="perDay" class="num">¥0</div>
+      </div>
+    </section>
+
+    <section class="input-card">
+      <div class="label">支出を追加</div>
+      <input id="amount" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="850">
+      <button id="addBtn" type="button">追加</button>
+      <div class="row">
+        <button id="budgetBtn" class="secondary" type="button">予算変更</button>
+        <button id="undoBtn" class="secondary" type="button">取り消し</button>
+      </div>
+      <button id="clearBtn" class="danger" type="button" style="margin-top:10px;">今週を空にする</button>
+    </section>
+
+    <section class="history">
+      <div class="history-title">
+        <div class="label">履歴</div>
+        <div id="count" class="week">0件</div>
+      </div>
+      <div id="history"></div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+<script>
+(function(){
+  const DEFAULT_BUDGET = 100000;
+  const STORAGE_KEY = "weekly_budget_counter_v3";
+
+  const $ = (id) => document.getElementById(id);
+
+  function yen(n) {
+    return "¥" + Math.round(Number(n || 0)).toLocaleString("ja-JP");
+  }
+
+  function mondayKey(date = new Date()) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    d.setDate(d.getDate() + diff);
+    d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
+  }
+
+  function parseDate(key) {
+    return new Date(key + "T00:00:00");
+  }
+
+  function load() {
+    const key = mondayKey();
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) { data = {}; }
+    if (!data.week || data.week !== key) {
+      data = { week: key, budget: data.budget || DEFAULT_BUDGET, expenses: [] };
+      save(data);
+    }
+    if (!Array.isArray(data.expenses)) data.expenses = [];
+    if (!data.budget) data.budget = DEFAULT_BUDGET;
+    return data;
+  }
+
+  function save(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 1400);
+  }
+
+  function render() {
+    const data = load();
+    const spent = data.expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+    const remaining = data.budget - spent;
+    const today = new Date();
+    const day = today.getDay();
+    const daysLeftIncludingToday = day === 0 ? 1 : 8 - day;
+
+    const start = parseDate(data.week);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    $("week").textContent = `${start.getMonth()+1}/${start.getDate()}〜${end.getMonth()+1}/${end.getDate()}`;
+    $("remaining").textContent = yen(remaining);
+    $("remaining").className = "remaining " + (remaining <= 10000 ? "bad" : remaining <= 20000 ? "warn" : "ok");
+    $("subline").textContent = `支出 ${yen(spent)}`;
+    $("budgetText").textContent = yen(data.budget);
+    $("perDay").textContent = yen(remaining / Math.max(1, daysLeftIncludingToday));
+    $("count").textContent = `${data.expenses.length}件`;
+
+    const history = $("history");
+    history.innerHTML = "";
+    if (data.expenses.length === 0) {
+      history.innerHTML = '<div class="empty">まだ支出なし</div>';
+      return;
+    }
+
+    data.expenses.slice().reverse().forEach((e) => {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = `<span class="time">${e.time}</span><span class="amount">${yen(e.amount)}</span>`;
+      history.appendChild(div);
+    });
+  }
+
+  function addExpense() {
+    const input = $("amount");
+    const amount = Number(input.value);
+    if (!amount || amount <= 0) {
+      input.focus();
+      return;
+    }
+    const data = load();
+    const now = new Date();
+    data.expenses.push({
+      amount,
+      time: `${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`
+    });
+    save(data);
+    input.value = "";
+    render();
+    toast(`${yen(amount)} 追加`);
+  }
+
+  function changeBudget() {
+    const data = load();
+    const value = window.prompt("週予算を入力", String(data.budget));
+    const budget = Number(value);
+    if (!budget || budget <= 0) return;
+    data.budget = budget;
+    save(data);
+    render();
+    toast("週予算を変更");
+  }
+
+  function undoLast() {
+    const data = load();
+    if (data.expenses.length === 0) return toast("取り消す支出がありません");
+    const last = data.expenses.pop();
+    save(data);
+    render();
+    toast(`${yen(last.amount)} を取り消し`);
+  }
+
+  function clearThisWeek() {
+    const data = load();
+    if (data.expenses.length === 0) return toast("支出はありません");
+    const ok = window.confirm("今週の支出を全部消しますか？");
+    if (!ok) return;
+    data.expenses = [];
+    save(data);
+    render();
+    toast("今週を空にしました");
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    $("addBtn").addEventListener("click", addExpense);
+    $("budgetBtn").addEventListener("click", changeBudget);
+    $("undoBtn").addEventListener("click", undoLast);
+    $("clearBtn").addEventListener("click", clearThisWeek);
+    $("amount").addEventListener("keydown", function(e){ if (e.key === "Enter") addExpense(); });
+    render();
+  });
+})();
+</script>
+</body>
+</html>
